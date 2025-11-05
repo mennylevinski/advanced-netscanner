@@ -1,4 +1,4 @@
-# 🔍 Secuditor Network Scanner
+# 🔍 Light Network Scanner
 
 A lightweight, open-source Python tool for discovering devices on your local network.  
 Built for **ethical diagnostics**, **security awareness**, and **administrative auditing**.
