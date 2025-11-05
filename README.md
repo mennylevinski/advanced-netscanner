@@ -34,9 +34,9 @@ Built for **ethical diagnostics**, **security awareness**, and **administrative 
 
 ## ⚙️ Installation
 
-### 1️.Requirements
+### 1️ Requirements
 - Python **3.8+**
 - Works on **Windows**, **Linux**, and **macOS**
 - No external packages required
 
-### 2️. Download & Run
+### 2️ Download & Run
