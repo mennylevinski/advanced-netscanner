@@ -20,7 +20,7 @@ Use responsibly and in compliance with your local governance.
 - ⚡ **Fast & Accurate**, Combines ICMP, ARP, and socket checks.
 - 🔎 **Open Port Detection**, Scans common service ports (FTP, SSH, SMB, HTTP, RDP, etc.).
 - 🧩 **Console Mode**, Clean “black console” output; stays open after completion.
-- 🚫 **Risk Highlighting**, Marks known vulnerable ports with “!!”.
+- ⚠️ **Risk Highlighting**, Marks known vulnerable ports with “!!”.
 - 🧾 **Logging system**, exportable log file with for more detailed output **(New)**.
 
 ---
@@ -33,6 +33,8 @@ Use responsibly and in compliance with your local governance.
 - No external packages required
 
 ### 2️ Download & Run
+- Windows: `python light-net-scanner.py`
+- Linux: `./light-net-scanner.py`
 
 ---
 ## 🖼️ Screenshot
