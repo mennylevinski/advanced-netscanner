@@ -99,7 +99,7 @@ class Spinner:
                 break
             print(f"\r{self.message}{dots}   ", end="", flush=True)
             time.sleep(0.5)
-        # Clear the spinner line when done
+            
         print("\r" + " " * (len(self.message) + 10) + "\r", end="", flush=True)
 
     def start(self):
@@ -283,7 +283,7 @@ def _scan_ports(ip: str, ports: Iterable[int], timeout: float = 0.12, max_worker
 
 def discover_hosts(subnet: ipaddress.IPv4Network, max_workers: int = 400, tcp_ports=None, timeout: float = 0.1) -> List[str]:
     if tcp_ports is None:
-        tcp_ports = [80, 443, 22, 445]  # common ports for alive detection
+        tcp_ports = [22, 53, 139, 161, 443, 445]  # common ports for alive detection
 
     ips = [str(ip) for ip in subnet.hosts()]
     if not ips:
@@ -363,17 +363,24 @@ def _highlight_risky_ports(ports: Iterable[int]) -> List[str]:
     return [f"{p}({mapping.get(p,'')})" if p in mapping else str(p) for p in ports]
 
 # ======= Print Setup =======
-def test_print(subnet: Optional[ipaddress.IPv4Network] = None,
-               do_port_scan: bool = True,
-               fast: bool = True,
-               ports: Optional[Iterable[int]] = None):
+def test_print(
+    subnet: Optional[ipaddress.IPv4Network] = None,
+    do_port_scan: bool = True,
+    fast: bool = True,
+    ports: Optional[Iterable[int]] = None,
+    silent: bool = False,
+) -> list:
     if subnet is None:
         local = _local_ip()
         subnet = guess_subnet(local, 24)
 
     devices = discover_network(subnet=subnet, do_port_scan=do_port_scan, fast=fast, ports=ports)
 
-    headers = ["IP", "Hostname", "MAC", "Alive", "Open Ports"]
+    if silent:
+        return devices
+
+    # --- Print table ---
+    headers = ["IP Address", "Hostname", "MAC", "Alive", "Open Ports"]
     col_widths = [15, 20, 20, 10, 40]
 
     def _trim(s: str, w: int) -> str:
@@ -387,18 +394,64 @@ def test_print(subnet: Optional[ipaddress.IPv4Network] = None,
     logging.info(header_line)
     logging.info(sep_line)
 
+    seen_ips = set()
     for d in devices:
-        ip = _trim(d["ip"], col_widths[0])
-        host = _trim(d["hostname"] or "N/A", col_widths[1])
-        mac = _trim(d["mac"] or "N/A", col_widths[2])
+        ip = d["ip"]
+        if ip in seen_ips:
+            continue
+        seen_ips.add(ip)
+
+        host = _trim(d.get("hostname") or "N/A", col_widths[1])
+        mac = _trim(d.get("mac") or "N/A", col_widths[2])
         alive = str(d["alive"])
-        if d["open_ports"]:
+        if d.get("open_ports"):
             ports_str = ", ".join(_highlight_risky_ports(d["open_ports"]))
         else:
             ports_str = "N/A"
         ports_str = _trim(ports_str, col_widths[4])
 
-        logging.info(f"{ip.ljust(col_widths[0])}  {host.center(col_widths[1])}  {mac.center(col_widths[2])}  {alive.center(col_widths[3])}  {ports_str.center(col_widths[4])}")
+        logging.info(
+            f"{ip.ljust(col_widths[0])}  {host.center(col_widths[1])}  "
+            f"{mac.center(col_widths[2])}  {alive.center(col_widths[3])}  {ports_str.center(col_widths[4])}"
+        )
+
+    logging.info(sep_line)
+    return devices
+
+def print_devices(devices: list):
+    # Same logic as test_print, just the printing part
+    headers = ["IP Address", "Hostname", "MAC", "Alive", "Open Ports"]
+    col_widths = [15, 20, 20, 10, 40]
+
+    def _trim(s: str, w: int) -> str:
+        return (s[: w - 3] + "...") if len(s) > w else s
+
+    header_line = "  ".join(h.center(w) for h, w in zip(headers, col_widths))
+    sep_line = "–" * len(header_line)
+
+    logging.info(sep_line)
+    logging.info(header_line)
+    logging.info(sep_line)
+
+    seen_ips = set()
+    for d in devices:
+        ip = d["ip"]
+        if ip in seen_ips:
+            continue
+        seen_ips.add(ip)
+
+        host = _trim(d.get("hostname") or "N/A", col_widths[1])
+        mac = _trim(d.get("mac") or "N/A", col_widths[2])
+        alive = str(d["alive"])
+        ports_str = _trim(
+            ", ".join(_highlight_risky_ports(d.get("open_ports", []))) if d.get("open_ports") else "N/A",
+            col_widths[4]
+        )
+
+        logging.info(
+            f"{ip.ljust(col_widths[0])}  {host.center(col_widths[1])}  "
+            f"{mac.center(col_widths[2])}  {alive.center(col_widths[3])}  {ports_str.center(col_widths[4])}"
+        )
 
     logging.info(sep_line)
 
@@ -417,7 +470,7 @@ if __name__ == "__main__":
 
     setup_logger(level=log_level, logfile=log_file)
 
-    # 2) Detect local IP and subnet
+    # --- Detect local IP and subnet ---
     logging.info(f"{now}")
     logging.info("Detecting local IP...")
     local = _local_ip()
@@ -428,63 +481,109 @@ if __name__ == "__main__":
     # --- Initialize target_ips variable ---
     target_ips = None
 
-    # --- Ask user which scan to perform (robust loop & validation) ---
-    MAX_RANGE_SIZE = 512  
+# --- Ask user which scan to perform (LAN or custom) ---
+MAX_RANGE_SIZE = 512
+scan_results = []
 
-    def _ip_range_from_full_ips(start_ip: str, end_ip: str) -> List[str]:
-        a = ipaddress.IPv4Address(start_ip)
-        b = ipaddress.IPv4Address(end_ip)
-        if int(b) < int(a):
-            raise ValueError("End IP is smaller than start IP")
-        size = int(b) - int(a) + 1
-        if size > MAX_RANGE_SIZE:
-            raise ValueError(f"Range too large ({size} IPs); max is {MAX_RANGE_SIZE}")
-        return [str(ipaddress.IPv4Address(int(a) + i)) for i in range(size)]
+# --- helper functions ---
+def _ip_range_from_full_ips(start_ip: str, end_ip: str) -> List[str]:
+    a = ipaddress.IPv4Address(start_ip)
+    b = ipaddress.IPv4Address(end_ip)
+    if int(b) < int(a):
+        raise ValueError("End IP is smaller than start IP")
+    size = int(b) - int(a) + 1
+    if size > MAX_RANGE_SIZE:
+        raise ValueError(f"Range too large ({size} IPs); max is {MAX_RANGE_SIZE}")
+    return [str(ipaddress.IPv4Address(int(a) + i)) for i in range(size)]
 
-    def _ip_range_from_last_octets(base_ip_prefix: str, start_oct: int, end_oct: int) -> List[str]:
-        if start_oct < 1 or end_oct > 254 or start_oct > end_oct:
-            raise ValueError("Invalid last-octet range; must be 1..254 and start<=end")
-        size = end_oct - start_oct + 1
-        if size > MAX_RANGE_SIZE:
-            raise ValueError(f"Range too large ({size} IPs); max is {MAX_RANGE_SIZE}")
-        return [f"{base_ip_prefix}.{i}" for i in range(start_oct, end_oct + 1)]
-    
-    while True:
-        choice = input("\nTo start network scanning enter Y (or N to skip): ").strip().upper()
+# ---- main scan loop ----
+while True:
+    print("\nSelect scan type:")
+    print("1) LAN scanning")
+    print("2) Custom IP range")
+    scan_mode = input("Enter 1 or 2: ").strip()
 
-        if choice == "Y":
-            # --- Run scan ---
-            spinner = Spinner("Running scan")
-            spinner.start()
-            start = time.time()
+    if scan_mode not in {"1", "2"}:
+        print("Invalid choice!")
+        continue
 
-            try:
-                devices = []
-                test_print(subnet=subnet, do_port_scan=True, fast=True)
-
-            except KeyboardInterrupt:
-                logging.warning("Scan cancelled by user (KeyboardInterrupt).")
-                print("\nScan cancelled by user.")
-
-            finally:
-                spinner.stop()
-                elapsed = time.time() - start
-                logging.info(f"Scan finished in {elapsed:.1f}s")
-
-        
-            export = input("\nExport logs to text file? (Y to export, Enter to skip): ").strip().lower()
-            if export == "y":
-                export_path = "scan_log_export.txt"
-                with open(export_path, "w", encoding="utf-8") as f:
-                    f.write(log_buffer.getvalue())
-                print(f"Logs exported → {export_path}")
-
-            input("\nScan finished! Press Enter to exit...")
+    if scan_mode == "1":
+        choice = input("\nStart full LAN scan? (Y/N): ").strip().upper()
+        if choice != "Y":
+            print("LAN scan cancelled.")
+            input("Press Enter to exit...")
             break
 
-        elif choice == "N":
-            input("\nScan skipped. Press Enter to exit...")
+        spinner = Spinner("Running LAN scan")
+        spinner.start()
+        start = time.time()
+        try:
+            results = test_print(subnet=subnet, do_port_scan=True, fast=True)
+            scan_results.extend(results)
+        finally:
+            spinner.stop()
+            elapsed = time.time() - start
+            logging.info(f"LAN scan finished in {elapsed:.1f}s")
+
+    elif scan_mode == "2":
+        print("\nCustom scan options:")
+        print("Format options:")
+        print(" - Single IP (example: 1.1.1.1)")
+        print(" - IP Range  (example: 1.1.1.1-1.1.1.50)\n")
+
+        raw = input("Enter target (single IP or range): ").strip()
+        target_ips = []
+
+        try:
+            if "-" in raw:
+                start_ip, end_ip = map(str.strip, raw.split("-", 1))
+                ipaddress.ip_address(start_ip)
+                ipaddress.ip_address(end_ip)
+                target_ips = _ip_range_from_full_ips(start_ip, end_ip)
+            else:
+                ipaddress.ip_address(raw)
+                target_ips = [raw]
+        except Exception as e:
+            print(f"Invalid input: {e}")
+            continue
+
+        print(f"\nTarget IPs: {len(target_ips)}")
+        print(", ".join(target_ips[:10]) + (" ..." if len(target_ips) > 10 else ""))
+
+        choice = input("Start custom scan? (Y/N): ").strip().upper()
+        if choice != "Y":
+            print("Custom scan cancelled.")
+            input("Press Enter to exit...")
             break
-            
-        else:
-            print("Invalid input!")
+
+        logging.info(f"\nStarting custom scan for {len(target_ips)} targets...")
+        scan_results = {}
+
+        spinner = Spinner("Running custom scan")
+        spinner.start()
+        start = time.time()
+
+        try:
+            for ip in target_ips:
+                single_subnet = ipaddress.ip_network(f"{ip}/32")
+                results = test_print(subnet=single_subnet, do_port_scan=True, fast=True, silent=True)
+                if results:
+                    for d in results:
+                        key = d.get("ip") or d.get("mac")
+                        if key and key not in scan_results:
+                            scan_results[key] = d
+        finally:
+            spinner.stop()
+            elapsed = time.time() - start
+            logging.info(f"Custom scan finished in {elapsed:.1f}s — found {len(scan_results)} devices.")
+            print_devices(list(scan_results.values()))
+
+    export = input("\nExport logs to text file? (Y to export, Enter to skip): ").strip().lower()
+    if export == "y":
+        export_path = "scan_log_export.txt"
+        with open(export_path, "w", encoding="utf-8") as f:
+            f.write(log_buffer.getvalue())
+        print(f"Logs exported → {export_path}")
+
+    input("\nScan finished! Press Enter to exit...")
+    break
