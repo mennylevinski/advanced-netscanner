@@ -12,7 +12,7 @@ python light-net-scanner.py
 
 Linux:
 chmod +x light-net-scanner.py
-./light-net-scanner.py
+python3 light-net-scanner.py
 """
 
 import io
@@ -621,3 +621,4 @@ while True:
 
     input("\nScan finished! Press Enter to exit...")
     break
+
