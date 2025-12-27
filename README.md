@@ -19,7 +19,7 @@ Use responsibly and in compliance with your local governance.
 - **LAN Detection Mode**, detects your IPv4 subnet and scans the local network
 - **Custom Scan Mode**, user can select to target a spesific IP address or IP ranges
 - **Fast & Accurate**, combines ICMP, ARP, and socket checks and auto discovery
-- **Port Detection**, scans common service ports (FTP, SSH, SMB, HTTP, RDP, etc)
+- **Port Detection**, scans common service ports (FTP, SMB, SSH, HTTP, RDP, etc)
 - **Console / CLI**, clean “black console” output, stays open after completion
 - **Logging system**, exportable log file (TXT format) for more detailed output
 
