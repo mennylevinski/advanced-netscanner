@@ -362,6 +362,25 @@ def _highlight_risky_ports(ports: Iterable[int]) -> List[str]:
     mapping = {}
     return [f"{p}({mapping.get(p,'')})" if p in mapping else str(p) for p in ports]
 
+def _first_interface() -> Optional[str]:
+    """Return the first non-loopback interface name on Linux or Windows."""
+    system = platform.system().lower()
+    try:
+        if system == "linux":
+            out = subprocess.check_output(["ip", "link"], text=True)
+            m = re.findall(r"^\d+: (\S+):", out, re.MULTILINE)
+            for iface in m:
+                if iface != "lo":
+                    return iface
+        elif system == "windows":
+            cmd = ["powershell", "-Command", "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -First 1 -ExpandProperty Name"]
+            out = subprocess.check_output(cmd, text=True).strip()
+            if out:
+                return out
+    except Exception:
+        return None
+    return None
+
 # ======= Print Setup =======
 def test_print(
     subnet: Optional[ipaddress.IPv4Network] = None,
@@ -479,7 +498,8 @@ if __name__ == "__main__":
 
     # --- Detect local IP and subnet ---
     logging.info(f"{now}")
-    logging.info("Detecting local IP...")
+    interface = _first_interface()
+    logging.info(f"Interface: {interface}")
     local = _local_ip()
     logging.info(f"Local IP: {local}")
     subnet = guess_subnet(local, 24)
