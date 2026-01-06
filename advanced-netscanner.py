@@ -20,6 +20,7 @@ import os
 import re
 import sys
 import time
+import uuid
 import platform
 import socket
 import logging
@@ -84,6 +85,11 @@ def ensure_console(title: str = "Advanced Network Scanner"):
                 pass
         except Exception:
             pass
+
+def _limit_str(s: Optional[str], max_len: int = 23) -> Optional[str]:
+    if not s:
+        return s
+    return s if len(s) <= max_len else s[:max_len - 3] + "..."
 
 # ======= Spinner (moving dots) =======
 class Spinner:
@@ -371,15 +377,28 @@ def _first_interface() -> Optional[str]:
             m = re.findall(r"^\d+: (\S+):", out, re.MULTILINE)
             for iface in m:
                 if iface != "lo":
-                    return iface
+                    return _limit_str(iface)
         elif system == "windows":
-            cmd = ["powershell", "-Command", "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -First 1 -ExpandProperty Name"]
+            cmd = [
+                "powershell",
+                "-Command",
+                "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} "
+                "| Select-Object -First 1 -ExpandProperty Name"
+            ]
             out = subprocess.check_output(cmd, text=True).strip()
             if out:
-                return out
+                return _limit_str(out)
     except Exception:
         return None
     return None
+
+def _primary_mac() -> Optional[str]:
+    """Return primary system MAC address (best-effort, cross-platform)."""
+    try:
+        mac = uuid.getnode()
+        return ":".join(f"{(mac >> i) & 0xff:02x}" for i in range(40, -1, -8))
+    except Exception:
+        return None
 
 # ======= Print Setup =======
 def test_print(
@@ -500,6 +519,8 @@ if __name__ == "__main__":
     logging.info(f"{now}")
     interface = _first_interface()
     logging.info(f"Interface: {interface}")
+    mac = _primary_mac()
+    logging.info(f"Local Mac: {mac}")
     local = _local_ip()
     logging.info(f"Local IP: {local}")
     subnet = guess_subnet(local, 24)
