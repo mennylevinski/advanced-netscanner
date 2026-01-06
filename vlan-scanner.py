@@ -4,15 +4,15 @@
 """
 Author: Menny Levinski
 
-Light Network Scanner
+VLAN Scanner
 Lightweight LAN discovery & port audit tool.
 
 Windows:
-python light-net-scanner.py
+python vlan-scanner.py
 
 Linux:
-chmod +x light-net-scanner.py
-python3 light-net-scanner.py
+chmod +x vlan-scanner.py
+python3 vlan-scanner.py
 """
 
 import io
@@ -58,7 +58,7 @@ def setup_logger(level=logging.INFO, logfile: Optional[str] = None):
     logging.basicConfig(level=level, handlers=handlers)
 
 # ======= Console helper =======
-def ensure_console(title: str = "Network Scanner"):
+def ensure_console(title: str = "VLAN Scanner"):
     """Ensure a console is available on Windows with black background / white text."""
     if sys.platform.startswith("win"):
         try:
@@ -87,7 +87,7 @@ def ensure_console(title: str = "Network Scanner"):
 
 # ======= Spinner (moving dots) =======
 class Spinner:
-    """Simple console spinner/dots animation in a separate thread."""
+    """Simple  spinner/dots animation in a separate thread."""
     def __init__(self, message: str = "Running scan"):
         self.message = message
         self._stop_event = threading.Event()
@@ -115,7 +115,7 @@ COMMON_PORTS = [21, 22, 23, 67, 68, 69, 80, 53, 123, 137, 138, 161, 389, 443, 44
 # OS detection
 IS_WINDOWS = platform.system().lower().startswith("win")
 
-# Windows-specific flags to hide console windows for subprocess children
+# Windows-specific flags to hide  windows for subprocess children
 if IS_WINDOWS:
     WINDOWS_CREATE_NO_WINDOW = 0x08000000
     try:
@@ -358,7 +358,7 @@ def discover_network(subnet: Optional[ipaddress.IPv4Network] = None,
 
     return devices
 
-def _highlight_risky_ports(ports: Iterable[int]) -> List[str]:
+def _high_risky_ports(ports: Iterable[int]) -> List[str]:
     mapping = {}
     return [f"{p}({mapping.get(p,'')})" if p in mapping else str(p) for p in ports]
 
@@ -464,7 +464,7 @@ def is_private_ip(ip: str) -> bool:
 
 # ======= Main =======
 if __name__ == "__main__":
-    ensure_console("Light Network Scanner")
+    ensure_("VLAN Scanner")
 
     log_level = logging.DEBUG if "--debug" in sys.argv else logging.INFO
     log_file = None
@@ -628,3 +628,4 @@ while True:
             f.write(log_buffer.getvalue())
         print(f"Logs exported → {export_path}")
         continue
+
