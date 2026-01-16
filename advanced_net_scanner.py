@@ -547,10 +547,10 @@ def _ip_range_from_full_ips(start_ip: str, end_ip: str) -> List[str]:
 # ---- Main scan loop ----
 while True:
     print("\nSelect scan type:")
-    print("1 = LAN scanning")
-    print("2 = Custom IP range")
-    print("3 = Exit")
-    scan_mode = input("\nEnter choice: ").strip()
+    print("1. LAN scanning")
+    print("2. Custom IP range")
+    print("3. Exit")
+    scan_mode = input("\nEnter choice (1-3): ").strip()
 
     if scan_mode not in {"1", "2", "3"}:
         print("Invalid choice!")
