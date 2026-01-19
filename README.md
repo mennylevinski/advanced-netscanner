@@ -2,15 +2,7 @@
 
 Open source, cross platform Python tool designed to discover devices on your local IPv4 network.
 Built for ethical diagnostics, security awareness, and administrative auditing. Suitable for personal and organizational use.
-
----
-
-## ✔️ Legal Use
-
-This tool is intended solely for lawful and authorized use.
-You must obtain explicit permission from the network owner before scanning, auditing, or testing any systems.
-The author assumes no liability for misuse or for actions that violate applicable laws or organizational policies.
-Use responsibly and in compliance with your local governance.
+[MIT License](LICENSE)
 
 ---
 
@@ -25,7 +17,16 @@ Use responsibly and in compliance with your local governance.
 
 ---
 
-## Safety Notice
+## ✔️ Legal Use
+
+This tool is intended solely for lawful and authorized use.
+You must obtain explicit permission from the network owner before scanning, auditing, or testing any systems.
+The author assumes no liability for misuse or for actions that violate applicable laws or organizational policies.
+Use responsibly and in compliance with your local governance.
+
+---
+
+## 📌 Safety Notice
 
 Advanced Network Scanner is safe to use when downloaded from the official source.
 Because the application performs network discovery and scanning, some antivirus products may incorrectly flag or restrict its execution. This is a common false positive for legitimate network diagnostic tools.
