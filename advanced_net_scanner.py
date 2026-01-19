@@ -88,10 +88,18 @@ def ensure_console(title: str = "Advanced Network Scanner"):
         except Exception:
             pass
 
+# --- String limitation ---
 def _limit_str(s: Optional[str], max_len: int = 23) -> Optional[str]:
     if not s:
         return s
     return s if len(s) <= max_len else s[:max_len - 3] + "..."
+
+# --- Icon path ---
+def resource_path(relative_path):
+    """ Get absolute path to resource (works in .py and in PyInstaller EXE) """
+    if hasattr(sys, '_MEIPASS'):  # PyInstaller sets this attr
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
 
 # ======= Spinner (moving dots) =======
 class Spinner:
@@ -518,7 +526,8 @@ if __name__ == "__main__":
     setup_logger(level=log_level, logfile=log_file)
 
     # --- Detect local IP and subnet ---
-    logging.info("Author: Menny Levinski\n")
+    logging.info(f"Advanced Network Scanner {version}")
+    logging.info(f"© 2025 Menny Levinski – MIT License\n")
     logging.info(now)
     interface = _first_interface()
     logging.info(f"Interface: {interface or 'N/A'}")
